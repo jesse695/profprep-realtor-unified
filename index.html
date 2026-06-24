@@ -7,7 +7,23 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Source+Sans+3:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
+const REALTOR_LINKS = {"ok":{"6mo":"https://buy.stripe.com/9B65kwdCDakW3KU0ZI6Na0q","sub":"https://buy.stripe.com/eVqcMY7ef2SugxG6k26Na0r"},"tx":{"6mo":"https://buy.stripe.com/dRm00cdCDgJk5T25fY6Na0t","sub":"https://buy.stripe.com/dRm9AM4239gSchqaAi6Na0u"},"ks":{"6mo":"https://buy.stripe.com/14A8wI7efeBcgxGdMu6Na0w","sub":"https://buy.stripe.com/6oUcMY5672Suchq23M6Na0x"},"la":{"6mo":"https://buy.stripe.com/14A8wI9mn3WygxG0ZI6Na0z","sub":"https://buy.stripe.com/aFaeV60PR64Gchq4bU6Na0A"},"mo":{"6mo":"https://buy.stripe.com/eVq8wIeGH64Gchq5fY6Na0C","sub":"https://buy.stripe.com/dRm4gs0PR0Km2GQ8sa6Na0D"},"ny":{"6mo":"https://buy.stripe.com/cNibIUcyzeBca9ieQy6Nb0a","sub":"https://buy.stripe.com/dRmeV642378KgxG0ZI6Nb0b"},"ca":{"6mo":"https://buy.stripe.com/5kQdR2gOPct4chq9we6Nb0c","sub":"https://buy.stripe.com/9B6dR28ijgJk0yIdMu6Nb0d"},"fl":{"6mo":"https://buy.stripe.com/fZu28k6ab1Oq4OY0ZI6Nb0e","sub":"https://buy.stripe.com/7sY6oAbuvbp05T2fUC6Nb0f"}};
+function updateRealtorLink(){
+  var state=document.getElementById('pay-state').value;
+  var plan=document.getElementById('pay-plan').value;
+  var note=document.getElementById('pay-note');
+  var btn=document.getElementById('pay-btn');
+  if(!state){note.textContent='Select your state to continue';btn.style.opacity='.4';return;}
+  var url=REALTOR_LINKS[state]&&REALTOR_LINKS[state][plan];
+  if(url){btn.href=url;btn.style.opacity='1';note.textContent=plan==='6mo'?'$79 one-time · 6 months full access':'$29/month · cancel anytime';}
+}
+function goToPay(){
+  var btn=document.getElementById('pay-btn');
+  if(!btn.href||btn.href==='#'||btn.href===window.location.href+'#'){return false;}
+  return true;
+}
+</script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -316,24 +332,38 @@ textarea{resize:vertical;min-height:80px;line-height:1.6}
 
 <!-- PAYMENT WALL -->
 <div id="payment-screen" style="display:none;position:fixed;inset:0;background:#1C1410;align-items:center;justify-content:center;z-index:999;padding:2rem;flex-direction:column;text-align:center">
-  <div style="max-width:420px;width:100%">
+  <div style="max-width:440px;width:100%">
     <div style="font-family:'Playfair Display',serif;font-size:22px;margin-bottom:1.5rem"><span style="color:#E8A838">Prof</span><span style="color:#C4622D">Prep</span></div>
     <div style="background:rgba(255,255,255,.04);border:1px solid rgba(196,98,45,.2);border-radius:12px;padding:1.75rem;margin-bottom:1.25rem">
-      <div style="font-size:13px;color:rgba(255,255,255,.6);line-height:1.7;margin-bottom:1.25rem">Your email was not found or your access has expired.<br><br>Purchase access to get started.</div>
-      <div style="font-family:monospace;font-size:36px;color:#C4622D;margin-bottom:.35rem">$79</div>
-      <div style="font-size:11px;color:rgba(255,255,255,.25);margin-bottom:1.25rem">One-time &middot; 6 months full access</div>
-      <p style="font-size:13px;color:rgba(255,255,255,.5);margin-bottom:1rem">Select your state to get access:</p>
-      <div class="state-options" id="state-options">
-        <a href="https://buy.stripe.com/9B65kwdCDakW3KU0ZI6Na0q" class="state-opt"><span>🟥</span><span>Oklahoma</span><span class="sopt-price">$29</span></a>
-        <a href="https://buy.stripe.com/dRm00cdCDgJk5T25fY6Na0t" class="state-opt"><span>⭐</span><span>Texas</span><span class="sopt-price">$29</span></a>
-        <a href="https://buy.stripe.com/14A8wI7efeBcgxGdMu6Na0w" class="state-opt"><span>🌻</span><span>Kansas</span><span class="sopt-price">$29</span></a>
-        <a href="https://buy.stripe.com/14A8wI9mn3WygxG0ZI6Na0z" class="state-opt"><span>⚜️</span><span>Louisiana</span><span class="sopt-price">$29</span></a>
-        <a href="https://buy.stripe.com/eVq8wIeGH64Gchq5fY6Na0C" class="state-opt"><span>🏛️</span><span>Missouri</span><span class="sopt-price">$29</span></a>
-        <a href="https://buy.stripe.com/cNibIUcyzeBca9ieQy6Nb0a" class="state-opt"><span>🗽</span><span>New York</span><span class="sopt-price">$29</span></a>
-        <a href="https://buy.stripe.com/5kQdR2gOPct4chq9we6Nb0c" class="state-opt"><span>🐻</span><span>California</span><span class="sopt-price">$29</span></a>
-        <a href="https://buy.stripe.com/fZu28k6ab1Oq4OY0ZI6Nb0e" class="state-opt"><span>🌴</span><span>Florida</span><span class="sopt-price">$29</span></a>
+      <div style="font-size:13px;color:rgba(255,255,255,.6);line-height:1.7;margin-bottom:1.5rem">Your email was not found or your access has expired.<br>Select your state and plan to get started.</div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:1.25rem">
+        <div>
+          <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.35);margin-bottom:.4rem">State</label>
+          <select id="pay-state" onchange="updateRealtorLink()" style="width:100%;padding:.65rem .75rem;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:white;font-size:13px;font-family:inherit;appearance:none;cursor:pointer">
+            <option value="">Select state...</option>
+            <option value="ok">🟥 Oklahoma</option>
+            <option value="tx">⭐ Texas</option>
+            <option value="ks">🌻 Kansas</option>
+            <option value="la">⚜️ Louisiana</option>
+            <option value="mo">🏛️ Missouri</option>
+            <option value="ny">🗽 New York</option>
+            <option value="ca">🐻 California</option>
+            <option value="fl">🌴 Florida</option>
+          </select>
+        </div>
+        <div>
+          <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.35);margin-bottom:.4rem">Plan</label>
+          <select id="pay-plan" onchange="updateRealtorLink()" style="width:100%;padding:.65rem .75rem;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:white;font-size:13px;font-family:inherit;appearance:none;cursor:pointer">
+            <option value="6mo">$79 — 6 months</option>
+            <option value="sub">$29/mo — monthly</option>
+          </select>
+        </div>
       </div>
-      <div style="font-size:11px;color:rgba(255,255,255,.2)">Use the same email at checkout that you sign in with.</div>
+
+      <a id="pay-btn" href="#" onclick="return goToPay()" style="display:flex;align-items:center;justify-content:center;gap:8px;background:#C4622D;color:white;font-size:14px;font-weight:700;padding:13px;border-radius:8px;text-decoration:none;margin-bottom:.75rem">Get Access &rarr;</a>
+      <div id="pay-note" style="font-size:11px;color:rgba(255,255,255,.2)">Select your state to continue</div>
+      <div style="font-size:11px;color:rgba(255,255,255,.15);margin-top:.4rem">Use the same email at checkout that you sign in with.</div>
     </div>
     <button type="button" onclick="showAuth()" style="background:none;border:none;color:rgba(255,255,255,.25);font-size:12px;cursor:pointer">&larr; Use a different email</button>
   </div>
