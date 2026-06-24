@@ -298,7 +298,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.6}
 #state-display{font-size:12px;color:rgba(255,255,255,.4);margin-top:4px}
 
 </style>
-</head>
+<style>select option{background:#2a1a12;color:white;}</style></head>
 <body>
 
 <!-- AUTH -->
@@ -340,7 +340,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.6}
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:1.25rem">
         <div>
           <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.35);margin-bottom:.4rem">State</label>
-          <select id="pay-state" onchange="updateRealtorLink()" style="width:100%;padding:.65rem .75rem;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:white;font-size:13px;font-family:inherit;appearance:none;cursor:pointer">
+          <select id="pay-state" onchange="updateRealtorLink()" style="width:100%;padding:.65rem .75rem;background:#2a1a12;border:1px solid rgba(196,98,45,.4);border-radius:8px;color:white;font-size:13px;font-family:inherit;cursor:pointer">
             <option value="">Select state...</option>
             <option value="ok">🟥 Oklahoma</option>
             <option value="tx">⭐ Texas</option>
@@ -354,7 +354,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.6}
         </div>
         <div>
           <label style="display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.35);margin-bottom:.4rem">Plan</label>
-          <select id="pay-plan" onchange="updateRealtorLink()" style="width:100%;padding:.65rem .75rem;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:white;font-size:13px;font-family:inherit;appearance:none;cursor:pointer">
+          <select id="pay-plan" onchange="updateRealtorLink()" style="width:100%;padding:.65rem .75rem;background:#2a1a12;border:1px solid rgba(196,98,45,.4);border-radius:8px;color:white;font-size:13px;font-family:inherit;cursor:pointer">
             <option value="6mo">$79 — 6 months</option>
             <option value="sub">$29/mo — monthly</option>
           </select>
