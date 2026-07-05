@@ -600,7 +600,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.6}
 
 <script>
 let EXAM_TYPE = null; // set dynamically after login from user's purchased exam type
-const STATE_MAP = {"ok_realtor":{"name":"Oklahoma","abbr":"OK","authority":"OREC","flag":"🟥"},"tx_realtor":{"name":"Texas","abbr":"TX","authority":"TREC","flag":"⭐"},"ks_realtor":{"name":"Kansas","abbr":"KS","authority":"KREC","flag":"🌻"},"la_realtor":{"name":"Louisiana","abbr":"LA","authority":"LREC","flag":"⚜️"},"mo_realtor":{"name":"Missouri","abbr":"MO","authority":"MREC","flag":"🏛️"},"ny_realtor":{"name":"New York","abbr":"NY","authority":"DOS","flag":"🗽"},"ca_realtor":{"name":"California","abbr":"CA","authority":"DRE","flag":"🐻"},"fl_realtor":{"name":"Florida","abbr":"FL","authority":"FREC","flag":"🌴"},"realtor":{"name":"Oklahoma","abbr":"OK","authority":"OREC","flag":"🟥"},"realtor_national":{"name":"National","abbr":"NAT","authority":"PSI","flag":"🏡"},"la_realtor":{"name":"Louisiana","abbr":"LA","authority":"LREC","flag":"⚜️"},"ks_realtor":{"name":"Kansas","abbr":"KS","authority":"KREC","flag":"🌻"},"tx_realtor":{"name":"Texas","abbr":"TX","authority":"TREC","flag":"⭐"},"mo_realtor":{"name":"Missouri","abbr":"MO","authority":"MREC","flag":"🏛️"}};
+const STATE_MAP = {"ok_realtor":{"name":"Oklahoma","abbr":"OK","authority":"OREC","flag":"🟥"},"tx_realtor":{"name":"Texas","abbr":"TX","authority":"TREC","flag":"⭐"},"ks_realtor":{"name":"Kansas","abbr":"KS","authority":"KREC","flag":"🌻"},"la_realtor":{"name":"Louisiana","abbr":"LA","authority":"LREC","flag":"⚜️"},"mo_realtor":{"name":"Missouri","abbr":"MO","authority":"MREC","flag":"🏛️"},"ny_realtor":{"name":"New York","abbr":"NY","authority":"DOS","flag":"🗽"},"ca_realtor":{"name":"California","abbr":"CA","authority":"DRE","flag":"🐻"},"fl_realtor":{"name":"Florida","abbr":"FL","authority":"FREC","flag":"🌴"},"de_realtor":{"name":"Delaware","abbr":"DE","authority":"DREC","flag":"🐔"},"ga_realtor":{"name":"Georgia","abbr":"GA","authority":"GREC","flag":"🍑"},"ma_realtor":{"name":"Massachusetts","abbr":"MA","authority":"Real Estate Board","flag":"🦞"},"wa_realtor":{"name":"Washington","abbr":"WA","authority":"DOL","flag":"🌲"},"realtor":{"name":"Oklahoma","abbr":"OK","authority":"OREC","flag":"🟥"},"realtor_national":{"name":"National","abbr":"NAT","authority":"PSI","flag":"🏡"}};
 const ALLOC = { guide:10, tutor:75, adaptive_exam:25, sim:10 };
 
 // Fallback config if get_config fails
@@ -852,16 +852,46 @@ async function sendChat(){
 }
 
 // ── PRACTICE EXAM ─────────────────────────────────────────────
+async function startStaticExam(topics, count){
+  const container=document.getElementById('exam-container');
+  try{
+    let questions=[];
+    const perTopic=topics.length?Math.ceil(count/topics.length):count;
+    const fetchTopics=topics.length?topics:['all'];
+    for(const t of fetchTopics){
+      const res=await callData('get_practice_questions',{topic:t,count:Math.min(perTopic,50)});
+      questions=questions.concat((res.questions||[]).map(q=>({
+        stem:q.stem,options:q.options,correct:q.correct,rationale:q.rationale,
+        topic:q.topic,section:q.section,id:q.id
+      })));
+    }
+    questions=questions.sort(()=>Math.random()-0.5).slice(0,count);
+    if(!questions.length){
+      container.innerHTML='<div style="padding:1.5rem;color:var(--red)">No practice questions found for the selected topic(s) yet. Try a different topic or use Adaptive AI Exam mode.</div>';
+      document.getElementById('exam-config-panel').style.display='block';
+      document.getElementById('exam-area').style.display='none';
+      return;
+    }
+    currentQs=questions;renderExam(currentQs);
+    document.getElementById('score-disp').style.display='flex';updateScore();
+    await logSession('exam_static',topics.join(', '));
+  }catch(e){container.innerHTML=`<div style="padding:1.5rem;color:var(--red)">Error loading questions: ${e.message}</div>`;}
+}
 async function startExam(){
   const mode=document.getElementById('exam-mode').value;
   if(mode==='adaptive'&&!canUse('adaptive_exam')){openTopup("You've used your adaptive exam allocation. Top up, or use the unlimited static exam mode.");return;}
   const topics=[...document.querySelectorAll('#exam-pills .pill.sel')].map(p=>p.textContent.trim());if(!topics.length){alert('Select at least one topic.');return;}
   const section=document.getElementById('exam-section').value,type=document.getElementById('exam-type').value,count=document.getElementById('exam-count').value;
-  const btn=document.getElementById('btn-exam');btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Generating...';
+  const btn=document.getElementById('btn-exam');btn.disabled=true;btn.innerHTML='<span class="spinner"></span> '+(mode==='static'?'Loading questions...':'Generating...');
   examScore={correct:0,total:0};answeredQs=new Set();currentQs=[];
   document.getElementById('score-disp').style.display='none';
   const container=document.getElementById('exam-container');showLoading(container);
   document.getElementById('exam-area').style.display='block';document.getElementById('exam-config-panel').style.display='none';document.getElementById('exam-progress').style.width='0%';
+  if(mode==='static'){
+    await startStaticExam(topics,parseInt(count));
+    btn.disabled=false;btn.innerHTML='<i class="ti ti-player-play"></i> Start Exam';renderAllocDisplay();
+    return;
+  }
   const sMap={national:'National portion only — property ownership, agency, contracts, financing, fair housing, math, appraisal.',oklahoma:'Oklahoma state portion only — OREC rules, Oklahoma license law, disclosure requirements, trust accounts, advertising rules.',mixed:'Mix of national and Oklahoma content. Flag state questions with section:"State".'};
   const tMap={mixed:'mixed question styles',mcq:'standard multiple choice',scenario:'scenario-based situational questions'};
   const adaptNote=mode==='adaptive'?' ADAPTIVE MODE: target weak areas. Vary difficulty, focus on application over recall.':'';
@@ -876,10 +906,11 @@ async function startExam(){
 }
 function renderExam(qs){
   const container=document.getElementById('exam-container');container.innerHTML='';
+  const stateName=(STATE_MAP[EXAM_TYPE]&&STATE_MAP[EXAM_TYPE].name)||'State';
   qs.forEach((q,qi)=>{
-    const isOK=q.section==='Oklahoma';
+    const isOK=!!(q.section&&String(q.section).toLowerCase()==='state');
     const oh=q.options.map((o,i)=>`<button type="button" class="opt" id="opt-${qi}-${i}" onclick="toggleMCQ(this,${qi},${i})"><span class="ol">${['A','B','C','D'][i]}</span><span>${o.replace(/^[A-D]\.\s*/,'')}</span></button>`).join('');
-    container.innerHTML+=`<div class="qcard"><div class="qmeta"><span class="qbadge ${isOK?'ok':'nat'}">${isOK?'Oklahoma':'National'}</span><span class="qbadge top">${q.topic||''}</span><span class="qnum">Q${qi+1} of ${qs.length}</span></div><p class="qstem">${q.stem}</p><div class="opts" id="opts-${qi}">${oh}</div><div style="margin-top:.85rem" id="submit-row-${qi}"><button type="button" class="btn btn-soil" onclick="submitAnswer(${qi})" style="font-size:12px;padding:.5rem 1rem"><i class="ti ti-check"></i> Submit Answer</button></div><div class="rationale" id="rat-${qi}"><div class="rat-lbl">Rationale</div><div>${q.rationale}</div>${q.ok_law_note?`<div class="ok-law-note"><i class="ti ti-scale" style="font-size:11px"></i> ${q.ok_law_note}</div>`:''}</div></div>`;
+    container.innerHTML+=`<div class="qcard"><div class="qmeta"><span class="qbadge ${isOK?'ok':'nat'}">${isOK?stateName:'National'}</span><span class="qbadge top">${q.topic||''}</span><span class="qnum">Q${qi+1} of ${qs.length}</span></div><p class="qstem">${q.stem}</p><div class="opts" id="opts-${qi}">${oh}</div><div style="margin-top:.85rem" id="submit-row-${qi}"><button type="button" class="btn btn-soil" onclick="submitAnswer(${qi})" style="font-size:12px;padding:.5rem 1rem"><i class="ti ti-check"></i> Submit Answer</button></div><div class="rationale" id="rat-${qi}"><div class="rat-lbl">Rationale</div><div>${q.rationale}</div>${q.ok_law_note?`<div class="ok-law-note"><i class="ti ti-scale" style="font-size:11px"></i> ${q.ok_law_note}</div>`:''}</div></div>`;
   });
   document.getElementById('btn-more-exam').style.display='flex';
 }
