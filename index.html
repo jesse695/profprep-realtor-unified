@@ -350,9 +350,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.6}
             <option value="mo">🏛️ Missouri</option>
             <option value="ny">🗽 New York</option>
             <option value="ca">🐻 California</option>
-            <option value="fl">🌴 Florida</option>        <option value="ny">🗽 New York</option>
-        <option value="ca">🐻 California</option>
-        <option value="fl">🌴 Florida</option>
+            <option value="fl">🌴 Florida</option>
         <option value="wa">🌲 Washington</option>
         <option value="de">💙 Delaware</option>
         <option value="ma">🦞 Massachusetts</option>
@@ -483,7 +481,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.6}
         </div>
         <div class="fr">
           <div class="fg" style="margin-bottom:0"><label>Depth</label><select id="guide-depth"><option value="overview">Quick Overview</option><option value="standard" selected>Standard — Exam Ready</option><option value="deep">Deep Dive</option></select></div>
-          <div class="fg" style="margin-bottom:0"><label>Focus</label><select id="guide-focus"><option value="all">Concepts + Application + Law</option><option value="concepts">Core Concepts Only</option><option value="law">Oklahoma Law Focus</option><option value="exam">Exam Tips Focus</option></select></div>
+          <div class="fg" style="margin-bottom:0"><label>Focus</label><select id="guide-focus"><option value="all">Concepts + Application + Law</option><option value="concepts">Core Concepts Only</option><option value="law" id="guide-focus-law-opt">Oklahoma Law Focus</option><option value="exam">Exam Tips Focus</option></select></div>
         </div>
         <div style="margin-top:1rem;display:flex;gap:7px">
           <button type="button" class="btn btn-soil" onclick="buildGuide()" id="btn-guide"><i class="ti ti-wand"></i> Build Study Guide</button>
@@ -541,7 +539,7 @@ textarea{resize:vertical;min-height:80px;line-height:1.6}
 
     <!-- TRANSACTION SIMULATOR -->
     <div class="panel" id="panel-simulator">
-      <div class="sh"><div><div class="sec-title">Transaction Simulator</div><div class="sec-sub">Walk a complete Oklahoma residential transaction — make real decisions at every stage</div></div><div class="limit-badge" id="sim-limit">10 runs remaining</div></div>
+      <div class="sh"><div><div class="sec-title">Transaction Simulator</div><div class="sec-sub" id="sim-subtitle">Walk a complete Oklahoma residential transaction — make real decisions at every stage</div></div><div class="limit-badge" id="sim-limit">10 runs remaining</div></div>
       <div class="card" id="sim-config">
         <div style="background:rgba(196,98,45,.05);border:.5px solid rgba(196,98,45,.15);border-radius:var(--rs);padding:1rem;margin-bottom:1.25rem;font-size:13px;line-height:1.7;color:var(--text-2)"><strong style="color:var(--soil)">Walk into your first deal without it feeling like your first deal.</strong><br>The simulator puts you in the agent's seat for a complete residential transaction. At every stage you face a real decision with real consequences. State law is called out explicitly where it applies.</div>
         <div class="fr">
@@ -723,6 +721,8 @@ async function setUser(user){
     if(stateEl) stateEl.textContent = stateInfo.flag + ' ' + stateInfo.name + ' Real Estate Exam';
     const spl = document.getElementById('state-portion-label'); if(spl) spl.textContent = (stateInfo.abbr||'State')+' State Portion — 30 Questions';
     const badge = document.getElementById('state-law-badge'); if(badge) badge.textContent = (stateInfo.abbr||'STATE')+' LAW';
+    const gfl = document.getElementById('guide-focus-law-opt'); if(gfl) gfl.textContent = stateInfo.name + ' Law Focus';
+    const simSub = document.getElementById('sim-subtitle'); if(simSub) simSub.textContent = 'Walk a complete ' + stateInfo.name + ' residential transaction — make real decisions at every stage';
   }
   catch(e){console.warn('Access check failed:',e); EXAM_TYPE = EXAM_TYPE||'realtor';}
   document.getElementById('auth-screen').style.display='none';
@@ -827,9 +827,9 @@ async function buildGuide(){
   const fMap={all:'Cover core concepts, practical application, and exam tips.',concepts:'Focus on core concepts and definitions.',law:'Focus heavily on state statutes, state authority rules, and compliance requirements.',exam:'Focus on PSI exam tips, common wrong answers, and what the exam tests.'};
   const hasOK=okT.length>0;
   const stateNm2=STATE_MAP[EXAM_TYPE]?STATE_MAP[EXAM_TYPE].name:'State';
-  const okInstr=hasOK?' Use <div class="ok-callout"><div class="ok-callout-title">⚖️ '+stateNm2+' Law</div>...</div> for Oklahoma-specific rules.':'';
+  const okInstr=hasOK?' Use <div class="ok-callout"><div class="ok-callout-title">⚖️ '+stateNm2+' Law</div>...</div> for '+stateNm2+'-specific rules.':'';
   const sys=`You are an expert Real Estate PSI exam prep tutor for the state the user is testing in. Create study guides in HTML: <h3> for sections, <h4> for subsections, <ul><li> for lists, <strong> for key terms, <p> for explanation, <div class="formula-box"> for formulas. End with <div class="alert"><div class="alert-title">🔑 PSI Exam Key Points</div>...</div>. HTML only.${okInstr}`;
-  try{out.innerHTML=await callGenerate(sys,[{role:'user',content:`Create a ${dMap[depth]} for a real estate license candidate on: "${topics.join(', ')}". ${fMap[focus]} Distinguish national content from Oklahoma-specific law where relevant.`}],1800);addAllocUsed('guide');await logSession('study_guide',topics.join(', '));}
+  try{out.innerHTML=await callGenerate(sys,[{role:'user',content:`Create a ${dMap[depth]} for a real estate license candidate on: "${topics.join(', ')}". ${fMap[focus]} Distinguish national content from ${stateNm2}-specific law where relevant.`}],1800);addAllocUsed('guide');await logSession('study_guide',topics.join(', '));}
   catch(e){out.innerHTML=`<em style="color:var(--red)">Error: ${e.message}</em>`;}
   btn.disabled=false;btn.innerHTML='<i class="ti ti-wand"></i> Build Study Guide';
 }
@@ -892,10 +892,11 @@ async function startExam(){
     btn.disabled=false;btn.innerHTML='<i class="ti ti-player-play"></i> Start Exam';renderAllocDisplay();
     return;
   }
-  const sMap={national:'National portion only — property ownership, agency, contracts, financing, fair housing, math, appraisal.',oklahoma:'Oklahoma state portion only — OREC rules, Oklahoma license law, disclosure requirements, trust accounts, advertising rules.',mixed:'Mix of national and Oklahoma content. Flag state questions with section:"State".'};
+  const stateInfoExam=STATE_MAP[EXAM_TYPE]||{name:'their state',authority:'state'};
+  const sMap={national:'National portion only — property ownership, agency, contracts, financing, fair housing, math, appraisal.',state:`${stateInfoExam.name} state portion only — ${stateInfoExam.authority} rules, ${stateInfoExam.name} license law, disclosure requirements, trust accounts, advertising rules.`,mixed:`Mix of national and ${stateInfoExam.name} content. Flag state questions with section:"State".`};
   const tMap={mixed:'mixed question styles',mcq:'standard multiple choice',scenario:'scenario-based situational questions'};
   const adaptNote=mode==='adaptive'?' ADAPTIVE MODE: target weak areas. Vary difficulty, focus on application over recall.':'';
-  const sys='You are an expert Real Estate PSI exam question writer (calibrate state law to their home state). Return ONLY valid JSON, no markdown. Format: {"questions":[{"id":1,"section":"National","topic":"Agency","stem":"...","options":["A. ...","B. ...","C. ...","D. ..."],"correct":0,"rationale":"Full explanation.","ok_law_note":"Specific OREC rule if applicable — omit if not"}]}. correct is 0-indexed.';
+  const sys=`You are an expert Real Estate PSI exam question writer (calibrate state law to their home state). Return ONLY valid JSON, no markdown. Format: {"questions":[{"id":1,"section":"National","topic":"Agency","stem":"...","options":["A. ...","B. ...","C. ...","D. ..."],"correct":0,"rationale":"Full explanation.","ok_law_note":"Specific ${stateInfoExam.authority} rule if applicable — omit if not"}]}. correct is 0-indexed.`;
   try{
     const raw=await callGenerate(sys,[{role:'user',content:`Generate exactly ${count} real estate license exam questions calibrated to the user's state. ${sMap[section]} Type: ${tMap[type]}.${adaptNote} Topics: ${topics.join(', ')}. PSI exam format, full rationales.`}],2500);
     const data=JSON.parse(extractJSON(raw));currentQs=data.questions;renderExam(currentQs);
@@ -971,7 +972,7 @@ function renderSimStage(idx){
     <div class="card">
       <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text-3);margin-bottom:.5rem">${simData.title} &middot; Stage ${idx+1} of ${stageNames.length}</div>
       <div style="font-size:12px;color:var(--text-3);margin-bottom:.75rem">🏠 ${simData.property} &nbsp;|&nbsp; 👤 ${simData.client}</div>
-      ${s.ok_law_flag?`<div class="ok-flag"><i class="ti ti-scale" style="font-size:9px"></i> Oklahoma Law: ${s.ok_law_flag}</div>`:''}
+      ${s.ok_law_flag?`<div class="ok-flag"><i class="ti ti-scale" style="font-size:9px"></i> ${(STATE_MAP[EXAM_TYPE]&&STATE_MAP[EXAM_TYPE].name)||'State'} Law: ${s.ok_law_flag}</div>`:''}
       <div style="font-size:13px;line-height:1.75;color:var(--text)">${s.situation}</div>
     </div>
     <div class="qcard">
