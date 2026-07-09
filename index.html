@@ -758,7 +758,7 @@ window.addEventListener('beforeunload',()=>{if(!currentUser||!window.currentSess
 
 // ── WORKER CALLS ─────────────────────────────────────────────
 async function callData(action,data={}){
-  const res=await fetch('https://profprep-data.jesse-d79.workers.dev/data',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+currentUser.token},body:JSON.stringify({action,user_id:currentUser.id,exam_type:EXAM_TYPE,data})});
+  const res=await fetch('https://profprep-data.jesse-d79.workers.dev/data',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+((await sb.auth.getSession()).data.session?.access_token||'')},body:JSON.stringify({action,user_id:currentUser.id,exam_type:EXAM_TYPE,data})});
   return res.json();
 }
 async function callGenerate(system,messages,max_tokens=1500){
