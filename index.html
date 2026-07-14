@@ -374,6 +374,21 @@ textarea{resize:vertical;min-height:80px;line-height:1.6}
   </div>
 </div>
 
+<!-- MULTI-STATE PICKER (shown when 2+ valid purchased states exist) -->
+<div id="my-states-picker" style="display:none;position:fixed;inset:0;background:#1C1410;z-index:999;padding:2rem;overflow-y:auto">
+  <div style="max-width:520px;margin:0 auto">
+    <div style="text-align:center;padding:1.5rem 0 1.25rem">
+      <div style="font-family:'Playfair Display',serif;font-size:22px;margin-bottom:1rem"><span style="color:#E8A838">Prof</span><span style="color:#C4622D">Prep</span></div>
+      <div style="font-size:19px;font-weight:700;color:#fff;margin-bottom:.35rem">Your states</div>
+      <div style="font-size:13px;color:rgba(255,255,255,.5)">Pick a state to open its exam prep.</div>
+    </div>
+    <div id="my-states-list" style="display:flex;flex-direction:column;gap:.6rem"></div>
+    <div style="text-align:center;padding:1.25rem 0 .5rem">
+      <button type="button" onclick="showAuth()" style="background:none;border:none;color:rgba(255,255,255,.3);font-size:12px;cursor:pointer">Sign out</button>
+    </div>
+  </div>
+</div>
+
 <!-- TOP-UP MODAL -->
 <div class="modal-bg" id="topup-modal">
   <div class="modal">
@@ -706,42 +721,74 @@ function renderQuickRef(){
     </div>`).join('');
 }
 
+function enterAppWithExamType(examType){
+  EXAM_TYPE = examType;
+  const stateInfo = STATE_MAP[EXAM_TYPE] || {name:'Real Estate',abbr:'',authority:'PSI',flag:'🏡'};
+  const stateEl = document.getElementById('state-display');
+  if(stateEl) stateEl.textContent = stateInfo.flag + ' ' + stateInfo.name + ' Real Estate Exam';
+  const spl = document.getElementById('state-portion-label'); if(spl) spl.textContent = (stateInfo.abbr||'State')+' State Portion — 30 Questions';
+  const badge = document.getElementById('state-law-badge'); if(badge) badge.textContent = (stateInfo.abbr||'STATE')+' LAW';
+  const gfl = document.getElementById('guide-focus-law-opt'); if(gfl) gfl.textContent = stateInfo.name + ' Law Focus';
+  const simSub = document.getElementById('sim-subtitle'); if(simSub) simSub.textContent = 'Walk a complete ' + stateInfo.name + ' residential transaction — make real decisions at every stage';
+  document.getElementById('auth-screen').style.display='none';
+  document.getElementById('payment-screen').style.display='none';
+  const picker = document.getElementById('my-states-picker'); if(picker) picker.style.display='none';
+  document.getElementById('app').style.display='block';
+  document.getElementById('user-email-disp').textContent=currentUser.email;
+  loadExamConfig();
+  renderAllocDisplay();
+  loadDashboard();
+}
+
+function renderStatePicker(purchases){
+  document.getElementById('auth-screen').style.display='none';
+  document.getElementById('payment-screen').style.display='none';
+  document.getElementById('app').style.display='none';
+  const list = document.getElementById('my-states-list');
+  list.innerHTML = purchases.map(p => {
+    const info = STATE_MAP[p.exam_type] || {name:p.exam_type, abbr:'', authority:'', flag:'🏡'};
+    const expires = new Date(p.expires_at).toLocaleDateString();
+    return `<button type="button" onclick="enterAppWithExamType('${p.exam_type}')" style="text-align:left;background:rgba(255,255,255,.04);border:1px solid rgba(196,98,45,.2);border-radius:10px;padding:14px 16px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;color:white;font-family:inherit">
+      <div>
+        <div style="font-size:15px;font-weight:700;margin-bottom:3px">${info.flag} ${info.name} Real Estate</div>
+        <div style="font-size:12px;color:rgba(255,255,255,.45)">${info.authority} · Access through ${expires}</div>
+      </div>
+      <div style="font-size:18px;color:rgba(255,255,255,.35)">&rarr;</div>
+    </button>`;
+  }).join('');
+  document.getElementById('my-states-picker').style.display='block';
+}
+
 async function setUser(user){
   currentUser=user;
   const {data:{session}}=await sb.auth.getSession();
   currentUser.token=session?.access_token||'';
   window.currentSessionId=crypto.randomUUID();
   try{
-    const res=await callData('check_access',{email:user.email});
-    if(!res.access){
+    // Fetch ALL of this user's payments, not just the single latest-expiring
+    // one check_access returns, so multiple purchased states show a picker
+    // instead of silently defaulting to whichever expires furthest out.
+    const res = await callData('list_my_purchases', {});
+    const purchases = res.purchases || [];
+    const now = new Date();
+    const valid = purchases.filter(p => p.exam_type && STATE_MAP[p.exam_type] && new Date(p.expires_at) > now);
+    if(valid.length === 0){
       document.getElementById('auth-screen').style.display='none';
       document.getElementById('app').style.display='none';
       document.getElementById('payment-screen').style.display='flex';
       return;
     }
-    // Set exam type from user's access record (exam_type field returned by check_access)
-    if(res.exam_type && STATE_MAP[res.exam_type]){
-      EXAM_TYPE = res.exam_type;
-    } else {
-      // Fall back to 'realtor' for legacy OK access
-      EXAM_TYPE = res.exam_type || 'realtor';
+    if(valid.length === 1){
+      enterAppWithExamType(valid[0].exam_type);
+      return;
     }
-    const stateInfo = STATE_MAP[EXAM_TYPE] || {name:'Real Estate',abbr:'',authority:'PSI',flag:'🏡'};
-    const stateEl = document.getElementById('state-display');
-    if(stateEl) stateEl.textContent = stateInfo.flag + ' ' + stateInfo.name + ' Real Estate Exam';
-    const spl = document.getElementById('state-portion-label'); if(spl) spl.textContent = (stateInfo.abbr||'State')+' State Portion — 30 Questions';
-    const badge = document.getElementById('state-law-badge'); if(badge) badge.textContent = (stateInfo.abbr||'STATE')+' LAW';
-    const gfl = document.getElementById('guide-focus-law-opt'); if(gfl) gfl.textContent = stateInfo.name + ' Law Focus';
-    const simSub = document.getElementById('sim-subtitle'); if(simSub) simSub.textContent = 'Walk a complete ' + stateInfo.name + ' residential transaction — make real decisions at every stage';
+    renderStatePicker(valid);
+    return;
   }
-  catch(e){console.warn('Access check failed:',e); EXAM_TYPE = EXAM_TYPE||'realtor';}
-  document.getElementById('auth-screen').style.display='none';
-  document.getElementById('payment-screen').style.display='none';
-  document.getElementById('app').style.display='block';
-  document.getElementById('user-email-disp').textContent=user.email;
-  await loadExamConfig();
-  renderAllocDisplay();
-  loadDashboard();
+  catch(e){
+    console.warn('Access check failed:',e);
+    enterAppWithExamType(EXAM_TYPE||'realtor');
+  }
 }
 function showAuth(){currentUser=null;document.getElementById('auth-screen').style.display='flex';document.getElementById('app').style.display='none';document.getElementById('payment-screen').style.display='none';}
 
